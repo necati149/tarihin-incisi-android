@@ -1,0 +1,4 @@
+// Tarihin İncisi — Android projesi (kök)
+plugins {
+    id 'com.android.application' version '8.11.1' apply false
+}

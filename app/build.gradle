@@ -1,0 +1,50 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.tarihinincisi.app'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.tarihinincisi.app'
+        minSdk 24
+        targetSdk 36
+        // Her Play güncellemesinde versionCode'u 1 artır, versionName'i değiştir.
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    // İmza: GitHub derlemesinde gizli değişkenlerden okunur. Android Studio'da
+    // Build > Generate Signed App Bundle sihirbazı kullanılır (bu blok o zaman devre dışıdır).
+    signingConfigs {
+        release {
+            if (System.getenv('TI_KEYSTORE')) {
+                storeFile file(System.getenv('TI_KEYSTORE'))
+                storePassword System.getenv('TI_STORE_PASS')
+                keyAlias System.getenv('TI_KEY_ALIAS')
+                keyPassword System.getenv('TI_KEY_PASS')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            if (System.getenv('TI_KEYSTORE')) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.core:core:1.13.1'
+}
