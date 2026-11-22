@@ -1,9 +1,14 @@
 name: AAB Derle
 
+# İmzasız AAB derlenir ve "derleme" dalına yüklenir. İmza, anahtar GitHub'a
+# hiç gönderilmeden ayrıca (jarsigner ile) atılır.
 on:
   workflow_dispatch:
   push:
     branches: [main]
+
+permissions:
+  contents: write
 
 jobs:
   derle:
@@ -21,29 +26,24 @@ jobs:
       - name: Android 16 (API 36) bileşenleri
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
-      - name: İmza anahtarını hazırla
-        env:
-          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
-        run: echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/imza.keystore"
-
       - name: AAB derle
-        env:
-          TI_KEYSTORE: ${{ runner.temp }}/imza.keystore
-          TI_STORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
-          TI_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          TI_KEY_PASS: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew bundleRelease --stacktrace
+          ./gradlew bundleRelease --stacktrace 2>&1 | tee derleme-gunlugu.txt
+          test -f app/build/outputs/bundle/release/app-release.aab
 
-      - name: İmzayı doğrula
-        run: jarsigner -verify app/build/outputs/bundle/release/app-release.aab | tail -2
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tarihin-incisi-aab
-          path: app/build/outputs/bundle/release/app-release.aab
-
-      - name: Anahtar dosyasını sil
+      - name: Sonucu "derleme" dalına yükle
         if: always()
-        run: rm -f "$RUNNER_TEMP/imza.keystore"
+        run: |
+          mkdir -p /tmp/cikti
+          cp derleme-gunlugu.txt /tmp/cikti/ || true
+          cp app/build/outputs/bundle/release/app-release.aab /tmp/cikti/app-release-imzasiz.aab || true
+          echo "${GITHUB_SHA} $(date -u +%FT%TZ) ${{ job.status }}" > /tmp/cikti/durum.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan derleme
+          git rm -rfq .
+          cp /tmp/cikti/* .
+          git add -A
+          git commit -qm "Derleme çıktısı ${GITHUB_SHA}"
+          git push -f origin derleme
