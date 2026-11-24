@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Doğru cevapta / test bitince kısa titreşim (ayarlardan açılırsa). İnternet izni yok: uygulama tamamen çevrimdışı. -->
+    <!-- Doğru cevapta / test bitince kısa titreşim (ayarlardan açılırsa). -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Yalnızca reklam yüklemek için. Uygulamanın içeriği telefondadır; internet yokken reklam çıkmaz, uygulama çalışmaya devam eder. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="false"
@@ -12,6 +15,10 @@
         android:supportsRtl="false"
         android:theme="@style/Tema.TarihinIncisi"
         android:enableOnBackInvokedCallback="true">
+
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-6655722499363603~6630926219" />
 
         <activity
             android:name=".MainActivity"

@@ -32,8 +32,17 @@ import android.widget.FrameLayout;
 import android.widget.Toast;
 import android.window.OnBackInvokedDispatcher;
 
+import androidx.annotation.NonNull;
 import androidx.core.content.FileProvider;
 import androidx.webkit.WebViewAssetLoader;
+
+import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.FullScreenContentCallback;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.interstitial.InterstitialAd;
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -54,6 +63,15 @@ public class MainActivity extends Activity {
     private FrameLayout kok;
     private ValueCallback<Uri[]> dosyaGeriDonus;
     private int zeminRengi = Color.parseColor("#F1E7D2");
+
+    /** Test/deneme bitiminde gösterilen tam ekran reklam birimi. */
+    private static final String REKLAM_BIRIMI = "ca-app-pub-6655722499363603/8671213302";
+    /** İki reklam arasında en az bu kadar süre geçer. */
+    private static final long REKLAM_ARASI_MS = 90_000L;
+    private InterstitialAd reklam;
+    private boolean reklamYukleniyor;
+    private boolean reklamHazirlandi;
+    private long sonReklamZamani;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
@@ -120,6 +138,7 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Kopru(), "TIAndroid");
 
         geriTusunuAyarla();
+        reklamlariBaslat();
 
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
         else web.loadUrl(ADRES);
@@ -231,8 +250,79 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
-    /** Sayfanın çağırdığı köprü: PDF kaydetme, kısa mesaj ve tema rengi. */
+    /** Reklam altyapısını arka planda başlatır; hata olursa uygulama reklamsız çalışmaya devam eder. */
+    private void reklamlariBaslat() {
+        new Thread(() -> {
+            try {
+                MobileAds.initialize(MainActivity.this, durum -> runOnUiThread(() -> {
+                    reklamHazirlandi = true;
+                    reklamYukle();
+                }));
+            } catch (Throwable ignored) {
+                // Reklam başlatılamazsa uygulama etkilenmez.
+            }
+        }).start();
+    }
+
+    /** Bir sonraki reklamı önceden yükler. İnternet yoksa yükleme sessizce başarısız olur. */
+    private void reklamYukle() {
+        if (!reklamHazirlandi || reklam != null || reklamYukleniyor || isFinishing()) return;
+        reklamYukleniyor = true;
+        try {
+            InterstitialAd.load(this, REKLAM_BIRIMI, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {
+                @Override
+                public void onAdLoaded(@NonNull InterstitialAd yuklenen) {
+                    reklam = yuklenen;
+                    reklamYukleniyor = false;
+                }
+
+                @Override
+                public void onAdFailedToLoad(@NonNull LoadAdError hata) {
+                    reklam = null;
+                    reklamYukleniyor = false;
+                }
+            });
+        } catch (Throwable t) {
+            reklamYukleniyor = false;
+        }
+    }
+
+    /** Hazır bir reklam varsa gösterir; yoksa (ör. internet kapalıyken) hiçbir şey yapmaz. */
+    private void reklamGoster() {
+        long simdi = System.currentTimeMillis();
+        if (reklam == null) {
+            reklamYukle();
+            return;
+        }
+        if (simdi - sonReklamZamani < REKLAM_ARASI_MS || isFinishing()) return;
+        final InterstitialAd gosterilecek = reklam;
+        reklam = null;
+        gosterilecek.setFullScreenContentCallback(new FullScreenContentCallback() {
+            @Override
+            public void onAdDismissedFullScreenContent() {
+                reklamYukle();
+            }
+
+            @Override
+            public void onAdFailedToShowFullScreenContent(@NonNull AdError hata) {
+                reklamYukle();
+            }
+        });
+        try {
+            sonReklamZamani = simdi;
+            gosterilecek.show(this);
+        } catch (Throwable t) {
+            reklamYukle();
+        }
+    }
+
+    /** Sayfanın çağırdığı köprü: PDF kaydetme, kısa mesaj, tema rengi ve reklam. */
     private class Kopru {
+
+        @JavascriptInterface
+        public void reklamGoster() {
+            runOnUiThread(MainActivity.this::reklamGoster);
+        }
 
         @JavascriptInterface
         public void dosyaKaydet(String ad, String tur, String base64) {

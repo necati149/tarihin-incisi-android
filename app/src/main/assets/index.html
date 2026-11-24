@@ -18,6 +18,18 @@
     }
     return asil.apply(this, arguments);
   };
+  /* Reklam: test ya da deneme bitince, sonuç/analiz ekranından başka bir yere geçerken tam ekran reklam istenir.
+     Reklam hazır değilse (ör. internet kapalıyken) hiçbir şey olmaz. */
+  var reklamBekliyor = false;
+  function rota(u){ var m = /#\/([a-z0-9-]*)/i.exec(String(u || '')); return m ? m[1] : ''; }
+  var SONUC = { results: 1, rapor: 1, summary: 1 };
+  window.addEventListener('hashchange', function(e){
+    try {
+      var eski = rota(e.oldURL), yeni = rota(e.newURL);
+      if (yeni === 'results' && (eski === 'quiz' || eski === 'exam')) { reklamBekliyor = true; return; }
+      if (reklamBekliyor && SONUC[eski] && !SONUC[yeni]) { reklamBekliyor = false; if (window.TIAndroid.reklamGoster) window.TIAndroid.reklamGoster(); }
+    } catch(err){}
+  });
   /* Telefonun üst ve alt çubuk rengi seçilen temaya uysun */
   var son = '';
   function renk(){ try { var v = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(); if (/^#[0-9a-f]{6}$/i.test(v) && v !== son) { son = v; window.TIAndroid.temaRengi(v); } } catch(e){} }
