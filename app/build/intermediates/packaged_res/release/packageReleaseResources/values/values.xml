@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ikon_zemin">#EFE3C8</color>
+    <color name="zemin">#F1E7D2</color>
+    <string name="app_name">Tarihin İncisi</string>
+    <style name="Tema.TarihinIncisi" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/zemin</item>
+        <item name="android:statusBarColor">@color/zemin</item>
+        <item name="android:navigationBarColor">@color/zemin</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>
